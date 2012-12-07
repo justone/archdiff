@@ -7,6 +7,8 @@ use Getopt::Long;
 
 our $VERSION = '0.1';
 
+my @DEFAULT_DIFFARGS = qw/-u -r --brief/;
+
 my $QUIET   = 0;
 my $VERBOSE = 0;
 
@@ -33,6 +35,20 @@ sub run_archdiff {
         show_version();
         exit;
     }
+
+    print STDERR Dumper( \@argv );
+    use Data::Dumper;
+    my ( $left_file, $right_file, @diffargs ) = @argv;
+    if ( scalar @argv < 2 ) {
+        ERROR("You must pass in two archives to compare.");
+        exit 1;
+    }
+
+    @diffargs = @DEFAULT_DIFFARGS unless @diffargs;
+
+    DEBUG("left side: $left_file");
+    DEBUG("right side: $right_file");
+    DEBUG("diff args: @diffargs");
 }
 
 # a few log4perl-alikes
