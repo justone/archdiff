@@ -1,0 +1,121 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use English qw( -no_match_vars );    # Avoids regex performance penalty
+use Getopt::Long;
+
+our $VERSION = '0.1';
+
+my $QUIET   = 0;
+my $VERBOSE = 0;
+
+run_archdiff(@ARGV) unless defined caller;
+
+sub run_archdiff {
+    my (@argv) = @_;
+
+    my %opts;
+
+    Getopt::Long::Configure("no_auto_abbrev");
+    GetOptionsFromArray( \@argv, \%opts, 'verbose|v', 'quiet|q', 'help|h|?',
+        'version' );
+
+    $VERBOSE = $opts{verbose};
+    $QUIET   = $opts{quiet};
+
+    if ( $opts{'help'} ) {
+        show_usage();
+        exit;
+    }
+
+    if ( $opts{'version'} ) {
+        show_version();
+        exit;
+    }
+}
+
+# a few log4perl-alikes
+sub ERROR {
+    printf "ERROR: %s\n", shift;
+}
+
+sub WARN {
+    printf "WARN: %s\n", shift;
+}
+
+sub INFO {
+    printf "INFO: %s\n", shift if !$QUIET;
+}
+
+sub DEBUG {
+    printf "DEBUG: %s\n", shift if $VERBOSE;
+}
+
+sub show_usage {
+    show_version();
+    print <<END;
+
+Usage:
+    archdiff one.tar.gz two.tar.gz
+    archdiff one.tgz two.zip
+    archdiff one.zip two/
+
+For full documentation, run "perldoc $0".
+END
+}
+
+sub show_version {
+    print "archdiff version $VERSION\n";
+}
+
+# work-alike for function from perl 5.8.9 and later
+# added for compatibility with CentOS 5, which is stuck on 5.8.8
+sub GetOptionsFromArray {
+    my ( $argv, $opts, @options ) = @_;
+
+    local @ARGV = @$argv;
+    GetOptions( $opts, @options );
+
+    # update the passed argv array
+    @$argv = @ARGV;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+    archdiff - Show high level differences between archives.
+
+=head1 SYNOPSIS
+
+    archdiff one.tar.gz two.tar.gz
+    archdiff one.tgz two.zip
+    archdiff one.zip two/
+
+=head1 DESCRIPTION
+
+Takes two archives, or an archive and a directory and shows a summary of the
+differences between them.
+
+=head1 OPTIONS
+
+  --verbose     Show extra information about what archdiff is doing
+  --quiet       Show as little info as possible.
+  --version     Print version information.
+
+=head1 AUTHOR
+
+Nate Jones <nate@endot.org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2012 L</AUTHOR> as listed above.
+
+=head1 LICENSE
+
+This program is free software distributed under the Artistic License 2.0.
+
+=cut
