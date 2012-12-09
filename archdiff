@@ -2,12 +2,16 @@
 
 use strict;
 use warnings;
-use English qw( -no_match_vars );    # Avoids regex performance penalty
+use English qw( -no_match_vars );
 use Getopt::Long;
+use File::Temp qw/ tempdir /;
+use File::Spec;
+use Cwd;
 
 our $VERSION = '0.1';
 
 my @DEFAULT_DIFFARGS = qw/-u -r --brief/;
+my $CWD              = getcwd();
 
 my $QUIET   = 0;
 my $VERBOSE = 0;
@@ -21,7 +25,7 @@ sub run_archdiff {
 
     Getopt::Long::Configure("no_auto_abbrev");
     GetOptionsFromArray( \@argv, \%opts, 'verbose|v', 'quiet|q', 'help|h|?',
-        'version' );
+        'autostrip|a', 'version' );
 
     $VERBOSE = $opts{verbose};
     $QUIET   = $opts{quiet};
@@ -36,8 +40,6 @@ sub run_archdiff {
         exit;
     }
 
-    print STDERR Dumper( \@argv );
-    use Data::Dumper;
     my ( $left_file, $right_file, @diffargs ) = @argv;
     if ( scalar @argv < 2 ) {
         ERROR("You must pass in two archives to compare.");
@@ -49,6 +51,61 @@ sub run_archdiff {
     DEBUG("left side: $left_file");
     DEBUG("right side: $right_file");
     DEBUG("diff args: @diffargs");
+
+    my $left_dir  = file_to_dir( $left_file,  \%opts );
+    my $right_dir = file_to_dir( $right_file, \%opts );
+
+    system( 'diff', @diffargs, $left_dir, $right_dir );
+
+    # propagate diff's exit code out
+    exit $? >> 8;
+}
+
+sub file_to_dir {
+    my ( $filename, $options ) = @_;
+
+    if ( -d $filename ) {
+        return $filename;
+    }
+
+    if ( !-e $filename ) {
+        die "Unable to find file '$filename'\n";
+    }
+
+    DEBUG("original filename: $filename");
+    my ( $toss_vol, $toss_path, $bare_filename )
+        = File::Spec->splitpath($filename);
+    DEBUG("bare filename: $filename");
+
+    my $dir = tempdir( $bare_filename . '-XXXX', DIR => $CWD, CLEANUP => 1 );
+
+    my @unpack_command;
+    if ( $filename =~ m{.tar.gz} || $filename =~ m{.tgz} ) {
+        @unpack_command = ( 'tar', '-C', $dir, '-xzf', $filename );
+    }
+    elsif ( $filename =~ m{.tar.bz} || $filename =~ m{.tbz} ) {
+        @unpack_command = ( 'tar', '-C', $dir, '-xjf', $filename );
+    }
+    elsif ( $filename =~ m{.tar} ) {
+        @unpack_command = ( 'tar', '-C', $dir, '-xf', $filename );
+    }
+    elsif ( $filename =~ m{.zip} ) {
+        @unpack_command = ( 'unzip', '-d', $dir, $filename );
+    }
+
+    DEBUG( "unpacking $filename: " . join( ' ', @unpack_command ) );
+    system(@unpack_command);
+
+    if ( $options->{autostrip} ) {
+        opendir( my $dirhandle, $dir ) || die "can't open $dir: $!";
+        my @entries = grep { $_ ne '.' && $_ ne '..' } readdir($dirhandle);
+        closedir($dirhandle);
+
+        if ( scalar @entries == 1 && -d "$dir/$entries[0]" ) {
+            $dir = "$dir/$entries[0]";
+        }
+    }
+    return File::Spec->abs2rel( $dir, $CWD );
 }
 
 # a few log4perl-alikes
@@ -118,9 +175,12 @@ differences between them.
 
 =head1 OPTIONS
 
-  --verbose     Show extra information about what archdiff is doing
-  --quiet       Show as little info as possible.
-  --version     Print version information.
+  --autostrip -a    Detect if the archive only has one directory and compare
+                    that instead.
+  --verbose         Show extra information about what archdiff is doing
+  --quiet           Show as little info as possible.
+  --version         Print version information.
+  --help            Show help.
 
 =head1 AUTHOR
 
