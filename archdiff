@@ -25,7 +25,7 @@ sub run_archdiff {
 
     Getopt::Long::Configure("no_auto_abbrev");
     GetOptionsFromArray( \@argv, \%opts, 'verbose|v', 'quiet|q', 'help|h|?',
-        'autostrip|a', 'version' );
+        'no-autostrip|n', 'version' );
 
     $VERBOSE = $opts{verbose};
     $QUIET   = $opts{quiet};
@@ -96,7 +96,7 @@ sub file_to_dir {
     DEBUG( "unpacking $filename: " . join( ' ', @unpack_command ) );
     system(@unpack_command);
 
-    if ( $options->{autostrip} ) {
+    if ( !$options->{'no-autostrip'} ) {
         opendir( my $dirhandle, $dir ) || die "can't open $dir: $!";
         my @entries = grep { $_ ne '.' && $_ ne '..' } readdir($dirhandle);
         closedir($dirhandle);
@@ -175,12 +175,13 @@ differences between them.
 
 =head1 OPTIONS
 
-  --autostrip -a    Detect if the archive only has one directory and compare
-                    that instead.
-  --verbose         Show extra information about what archdiff is doing
-  --quiet           Show as little info as possible.
-  --version         Print version information.
-  --help            Show help.
+  --no-autostrip -n     Normally, if an archive has only one directory, that
+                        directory is compared instead of the root of the
+                        archive.  This option disables that behavior.
+  --verbose             Show extra information about what archdiff is doing
+  --quiet               Show as little info as possible.
+  --version             Print version information.
+  --help                Show help.
 
 =head1 AUTHOR
 
