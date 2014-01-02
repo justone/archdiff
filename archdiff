@@ -10,7 +10,7 @@ use Cwd;
 
 our $VERSION = '0.1';
 
-my @DEFAULT_DIFFARGS = qw/-u -r --brief/;
+my @DEFAULT_DIFFARGS = qw/-r --brief/;
 my $CWD              = getcwd();
 
 my $QUIET   = 0;
