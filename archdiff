@@ -23,7 +23,7 @@ sub run_archdiff {
 
     my %opts;
 
-    Getopt::Long::Configure("no_auto_abbrev");
+    Getopt::Long::Configure("no_auto_abbrev", "pass_through");
     GetOptionsFromArray( \@argv, \%opts, 'verbose|v', 'quiet|q', 'help|h|?',
         'no-autostrip|n', 'version' );
 
